@@ -1,2 +1,0 @@
-goose postgres postgres://postgres:5Sonline@localhost:5432/blogator up
-goose postgres postgres://postgres:5Sonline@localhost:5432/blogator down
