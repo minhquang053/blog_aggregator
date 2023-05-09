@@ -7,25 +7,29 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/minhquang053/blog_aggregator/internal/auth"
 	"github.com/minhquang053/blog_aggregator/internal/database"
 )
 
-type userCreateResponse struct {
+type userResponse struct {
 	Id        string
 	Create_At time.Time
 	Update_At time.Time
 	Name      string
+	Api_Key   string
 }
 
-func databaseUserToUserResponse(user database.User) userCreateResponse {
-	return userCreateResponse{
+func databaseUserToUserResponse(user database.User) userResponse {
+	return userResponse{
 		Id:        user.ID.String(),
 		Create_At: user.CreatedAt,
 		Update_At: user.UpdatedAt,
 		Name:      user.Name,
+		Api_Key:   user.ApiKey,
 	}
 }
 
+// Post /v1/users
 func (apiCfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Name string `json:"name"`
@@ -51,5 +55,20 @@ func (apiCfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	respondWithJSON(w, 200, databaseUserToUserResponse(user))
+}
+
+// Get v1/users
+func (apiCfg *apiConfig) handlerUsersRead(w http.ResponseWriter, r *http.Request) {
+	apiKey, err := auth.GetApiKey(r.Header)
+	if err != nil {
+		respondWithError(w, 401, "Access denied")
+		return
+	}
+	user, err := apiCfg.DB.GetUserByAPIKey(r.Context(), apiKey)
+	if err != nil {
+		respondWithError(w, 404, "User not found")
+		return
+	}
 	respondWithJSON(w, 200, databaseUserToUserResponse(user))
 }
