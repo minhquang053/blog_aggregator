@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/minhquang053/blog_aggregator/internal/database"
 )
@@ -32,7 +33,6 @@ func (cfg *apiConfig) handlerFeedFollowsCreate(w http.ResponseWriter, r *http.Re
 	type parameters struct {
 		Feed_Id uuid.UUID
 	}
-
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
@@ -44,16 +44,44 @@ func (cfg *apiConfig) handlerFeedFollowsCreate(w http.ResponseWriter, r *http.Re
 
 	feedFollow, err := cfg.DB.CreateFeedFollow(r.Context(), database.CreateFeedFollowParams{
 		ID:        uuid.New(),
-		FeedID:    params.Feed_Id,
 		UserID:    user.ID,
+		FeedID:    params.Feed_Id,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 	})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't create feed follow")
-		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Feed does not exist")
 		return
 	}
 
 	respondWithJSON(w, 200, databaseFollowToFollowResponse(feedFollow))
+}
+
+func (cfg *apiConfig) handlerFeedFollowsDelete(w http.ResponseWriter, r *http.Request, user database.User) {
+	ffid := chi.URLParam(r, "feedFollowID")
+	id, err := uuid.Parse(ffid)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid UUID format")
+		return
+	}
+
+	err = cfg.DB.DeleteFeedFollow(r.Context(), database.DeleteFeedFollowParams{
+		ID:     id,
+		UserID: user.ID,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't delete feed_follow")
+		return
+	}
+
+	respondWithJSON(w, 200, struct{}{})
+}
+
+func (cfg *apiConfig) handlerFeedFollowsRead(w http.ResponseWriter, r *http.Request, user database.User) {
+	feedFollows, err := cfg.DB.GetFeedFollowsForUser(r.Context(), user.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't fetch feeds for user")
+		return
+	}
+	respondWithJSON(w, 200, feedFollows)
 }
