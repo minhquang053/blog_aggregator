@@ -42,7 +42,10 @@ func main() {
 	v1Router.Get("/readiness", handlerReadiness)
 	v1Router.Get("/err", handlerError)
 	v1Router.Post("/users", apiCfg.handlerUsersCreate)
-	v1Router.Get("/users", apiCfg.handlerUsersRead)
+	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.handlerUsersRead))
+	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handlerFeedsCreate))
+	v1Router.Get("/feeds", apiCfg.handlerFeedsRead)
+	v1Router.Post("/feed_follows", apiCfg.middlewareAuth(apiCfg.handlerFeedFollowsCreate))
 
 	// Mount subrouters to main router
 	r.Mount("/v1", v1Router)
